@@ -1,1 +1,0 @@
-# sd-command-center
