@@ -7,20 +7,13 @@
 <script>
 // ─────────────────────────────────────────────────────────────────
 // SD COMMAND CENTER — CONFIGURATION
-// Fill in your values below, then upload this single HTML file
-// to SharePoint. No other files needed.
+// This file is safe to host publicly — no credentials here.
+// All sensitive values (Client ID, Secret, Queue IDs) live in
+// Cloudflare Worker environment variables.
 // ─────────────────────────────────────────────────────────────────
 const CONFIG = {
   genesys: {
-    // Your Cloudflare Worker URL — set this after deploying the worker
     workerUrl: "https://genesys-proxy.rays0111.workers.dev",
-    region:    "usw2.pure.cloud",
-    queueIds: [
-      "9baaad7b-cc8a-41e4-97ec-f700e2de80b",
-      "5200358d-5eac-4ea8-a541-a17e50009250",
-      "52b31dcb-bb32-423e-bbf9-c4449e154cc4",
-      "18b0fbac-5816-462a-9ad4-9d72e403f93d"
-    ]
   },
   sharepoint: {
     fileUrl:   "https://wwt-my.sharepoint.com/:x:/r/personal/schmitta_wwt_com/_layouts/15/Doc.aspx?sourcedoc=%7B62069F15-EE7C-480D-962F-A1CB7511EA03%7D&file=CC%20Escalation%20Review.xlsx&action=default&mobileredirect=true",
@@ -1610,26 +1603,40 @@ const CONFIG = {
   const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
   // ── GENESYS — via Cloudflare Worker ─────────────────────────────────────
-  // Auth is handled server-side in the Worker. The dashboard just calls the
-  // Worker URL with an X-Genesys-Path header telling it which API to hit.
+  // All credentials and queue IDs live in the Worker's environment variables.
+  // The dashboard just calls named routes on the Worker.
 
   async function genesysGet(path) {
-    const resp = await fetch(CONFIG.genesys.workerUrl, {
+    const resp = await fetch(CONFIG.genesys.workerUrl + '?path=' + encodeURIComponent(path), {
       method:  'GET',
-      headers: { 'Content-Type': 'application/json', 'X-Genesys-Path': path },
+      headers: { 'Content-Type': 'application/json' },
     });
-    if (!resp.ok) throw new Error('Genesys Worker error ' + resp.status + ' on ' + path);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error('Worker error ' + resp.status + ': ' + (err.error || path));
+    }
     return resp.json();
   }
 
   async function genesysPost(path, body) {
-    const resp = await fetch(CONFIG.genesys.workerUrl, {
+    const resp = await fetch(CONFIG.genesys.workerUrl + '?path=' + encodeURIComponent(path), {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Genesys-Path': path },
+      headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),
     });
-    if (!resp.ok) throw new Error('Genesys Worker error ' + resp.status + ' on ' + path);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error('Worker error ' + resp.status + ': ' + (err.error || path));
+    }
     return resp.json();
+  }
+
+  // Fetch queue IDs from Worker so they never appear in the HTML
+  async function getQueueIds() {
+    const resp = await fetch(CONFIG.genesys.workerUrl + '?route=queueIds');
+    if (!resp.ok) throw new Error('Could not load queue config from Worker');
+    const data = await resp.json();
+    return data.queueIds;
   }
 
   function getThreshold(key) {
@@ -1727,6 +1734,7 @@ const CONFIG = {
   async function fetchQueueStats() {
     const now   = new Date();
     const start = new Date(now); start.setHours(0, 0, 0, 0);
+    const queueIds = await getQueueIds();
 
     const body = {
       interval: start.toISOString() + '/' + now.toISOString(),
@@ -1737,7 +1745,7 @@ const CONFIG = {
         predicates: [{
           type: 'dimension', dimension: 'queueId',
           operator: 'matches',
-          value: CONFIG.genesys.queueIds.join('|')
+          value: queueIds.join('|')
         }]
       },
       metrics: [
@@ -1752,7 +1760,7 @@ const CONFIG = {
 
     // Also fetch queue names
     const queueNames = {};
-    for (const qid of CONFIG.genesys.queueIds) {
+    for (const qid of queueIds) {
       try {
         const q = await genesysGet('/api/v2/routing/queues/' + qid);
         queueNames[qid] = q.name || qid;
@@ -1800,6 +1808,7 @@ const CONFIG = {
   async function fetchAgentStats() {
     const now   = new Date();
     const start = new Date(now); start.setHours(0, 0, 0, 0);
+    const queueIds = await getQueueIds();
 
     // Fetch all users in the org queues
     const usersResp = await genesysGet('/api/v2/users?pageSize=100&expand=presence');
@@ -1814,7 +1823,7 @@ const CONFIG = {
         predicates: [{
           type: 'dimension', dimension: 'queueId',
           operator: 'matches',
-          value: CONFIG.genesys.queueIds.join('|')
+          value: queueIds.join('|')
         }]
       },
       metrics: [
@@ -1870,9 +1879,10 @@ const CONFIG = {
     const now   = new Date();
     const start = new Date(now); start.setHours(0, 0, 0, 0);
     const threshMin = getThreshold('unstaffed');
+    const queueIds  = await getQueueIds();
     const events = [];
 
-    for (const qid of CONFIG.genesys.queueIds) {
+    for (const qid of queueIds) {
       try {
         const resp = await genesysPost('/api/v2/analytics/queues/observations/query', {
           interval: start.toISOString() + '/' + now.toISOString(),
