@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD Command Center</title>
+<script>
+// ─────────────────────────────────────────────────────────────────
+// SD COMMAND CENTER — CONFIGURATION
+// Fill in your values below, then upload this single HTML file
+// to SharePoint. No other files needed.
+// ─────────────────────────────────────────────────────────────────
+const CONFIG = {
+  genesys: {
+    // Your Cloudflare Worker URL — set this after deploying the worker
+    workerUrl: "https://genesys-proxy.rays0111.workers.dev",
+    region:    "usw2.pure.cloud",
+    queueIds: [
+      "9baaad7b-cc8a-41e4-97ec-f700e2de80b",
+      "5200358d-5eac-4ea8-a541-a17e50009250",
+      "52b31dcb-bb32-423e-bbf9-c4449e154cc4",
+      "18b0fbac-5816-462a-9ad4-9d72e403f93d"
+    ]
+  },
+  sharepoint: {
+    fileUrl:   "https://wwt-my.sharepoint.com/:x:/r/personal/schmitta_wwt_com/_layouts/15/Doc.aspx?sourcedoc=%7B62069F15-EE7C-480D-962F-A1CB7511EA03%7D&file=CC%20Escalation%20Review.xlsx&action=default&mobileredirect=true",
+    sheetName: "12"
+  }
+};
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #484f58;
+    --accent: #2f81f7;
+    --accent-soft: rgba(47,129,247,0.12);
+    --green: #3fb950;
+    --green-soft: rgba(63,185,80,0.12);
+    --yellow: #d29922;
+    --yellow-soft: rgba(210,153,34,0.12);
+    --red: #f85149;
+    --red-soft: rgba(248,81,73,0.12);
+    --purple: #a371f7;
+    --purple-soft: rgba(163,113,247,0.12);
+    --radius: 8px;
+    --radius-sm: 5px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-logo .wordmark {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .sidebar-logo .sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  .nav-section {
+    padding: 12px 8px 4px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 8px;
+    margin-bottom: 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-soft); color: var(--accent); }
+
+  .nav-item .icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 12px 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .agent-pill {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    cursor: pointer;
+  }
+
+  .agent-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+
+  .agent-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .agent-role { font-size: 10px; color: var(--text-muted); }
+
+  /* MAIN */
+  .main { flex: 1; overflow-x: hidden; }
+
+  .topbar {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .topbar-left h1 { font-size: 16px; font-weight: 700; }
+  .topbar-left .breadcrumb { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .filter-group { display: flex; gap: 6px; }
+
+  select, .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  select:focus, .btn:hover { border-color: var(--accent); }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover { background: #388bfd; }
+
+  /* CONTENT */
+  .content { padding: 24px 28px; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* STAT CARDS */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.blue::before { background: var(--accent); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.yellow::before { background: var(--yellow); }
+  .stat-card.red::before { background: var(--red); }
+  .stat-card.purple::before { background: var(--purple); }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .badge-green { background: var(--green-soft); color: var(--green); }
+  .badge-red { background: var(--red-soft); color: var(--red); }
+  .badge-yellow { background: var(--yellow-soft); color: var(--yellow); }
+
+  /* SECTION HEADERS */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  /* TABLES */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead tr { border-bottom: 1px solid var(--border); }
+
+  th {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-align: left;
+    white-space: nowrap;
+    background: var(--surface2);
+  }
+
+  td {
+    padding: 11px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tbody tr:hover { background: var(--surface2); }
+
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* FLAG INDICATORS */
+  .flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .flag-red { background: var(--red-soft); color: var(--red); }
+  .flag-yellow { background: var(--yellow-soft); color: var(--yellow); }
+  .flag-green { background: var(--green-soft); color: var(--green); }
+
+  /* ALERTS PANEL */
+  .alerts-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .alert-item:last-child { border-bottom: none; }
+
+  .alert-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: var(--yellow); }
+  .dot-blue { background: var(--accent); }
+
+  .alert-body { flex: 1; }
+  .alert-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .alert-detail { font-size: 12px; color: var(--text-muted); }
+  .alert-time { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+
+  /* UNSTAFFED TIMELINE */
+  .unstaffed-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .unstaffed-item:last-child { border-bottom: none; }
+
+  .unstaffed-queue {
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 150px;
+  }
+
+  .unstaffed-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 120px;
+  }
+
+  .duration-bar-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+
+  .duration-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--red);
+    opacity: 0.7;
+    min-width: 6px;
+  }
+
+  .duration-label { font-size: 11px; color: var(--red); font-family: 'JetBrains Mono', monospace; }
+
+  /* TWO COLUMN GRID */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* SCORE BARS */
+  .score-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .score-bar-bg { flex: 1; height: 6px; border-radius: 3px; background: var(--surface2); }
+  .score-bar-fill { height: 100%; border-radius: 3px; }
+  .score-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; min-width: 38px; text-align: right; }
+
+  /* PANEL SECTIONS */
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+
+  /* THRESHOLD SETTINGS */
+  .threshold-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .threshold-info { flex: 1; }
+
+  .threshold-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .threshold-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 460px;
+  }
+
+  .threshold-control {
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .threshold-control label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .threshold-control input[type="number"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 8px 12px;
+    width: 90px;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  .threshold-control input[type="number"]::-webkit-outer-spin-button,
+  .threshold-control input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .threshold-control input[type="number"]:focus { border-color: var(--accent); }
+
+  .unit-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .preview-val {
+    font-size: 11px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--accent-soft);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .threshold-divider {
+    height: 1px;
+    background: var(--border);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* MINI BADGE */
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 5px;
+    margin-left: 5px;
+  }
+
+  /* REVIEW SCORES */
+  .review-filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+
+  .chip.active, .chip:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .chip.red.active, .chip.red:hover {
+    background: var(--red-soft);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .chip.green.active, .chip.green:hover {
+    background: var(--green-soft);
+    border-color: var(--green);
+    color: var(--green);
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="wordmark">SD Command</div>
+      <div class="sub">Service Desk Intelligence</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <button class="nav-item active" onclick="setNav(this,'overview')">
+        <span class="icon">◈</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="setNav(this,'flags')">
+        <span class="icon">⚑</span> Flagged Items
+        <span class="count-badge">7</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Call Operations</div>
+      <button class="nav-item" onclick="setNav(this,'queues')">
+        <span class="icon">≡</span> Queue Metrics
+      </button>
+      <button class="nav-item" onclick="setNav(this,'agents')">
+        <span class="icon">◎</span> Agent Metrics
+      </button>
+      <button class="nav-item" onclick="setNav(this,'unstaffed')">
+        <span class="icon">⚠</span> Unstaffed Events
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Reviews</div>
+      <button class="nav-item" onclick="setNav(this,'reviews')">
+        <span class="icon">✦</span> ATS Escalations
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Manager</div>
+      <button class="nav-item" onclick="setNav(this,'thresholds')">
+        <span class="icon">⚙</span> Flag Thresholds
+      </button>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="agent-pill">
+        <div class="agent-avatar">JD</div>
+        <div>
+          <div class="agent-name">Jordan Davis</div>
+          <div class="agent-role">Manager</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 id="page-title">Dashboard</h1>
+        <div class="breadcrumb" id="page-breadcrumb">Today · June 16, 2026</div>
+      </div>
+      <div class="topbar-right">
+        <div class="filter-group">
+          <select id="agent-filter" onchange="applyAgentFilter()">
+            <option value="all">All Agents</option>
+            <option value="Alex Turner">Alex Turner</option>
+            <option value="Maria Santos">Maria Santos</option>
+            <option value="Chris Lee">Chris Lee</option>
+            <option value="Dana Brooks">Dana Brooks</option>
+            <option value="Sam Patel">Sam Patel</option>
+          </select>
+          <select id="time-filter">
+            <option>Today</option>
+            <option>This Week</option>
+            <option>This Month</option>
+            <option>Last 30 Days</option>
+          </select>
+        </div>
+        <button class="btn btn-primary">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- OVERVIEW TAB -->
+      <div class="tab-panel active" id="panel-overview">
+
+        <!-- KPI SUMMARY ROW -->
+        <div class="stat-grid">
+          <div class="stat-card blue">
+            <div class="stat-label">Total Offers</div>
+            <div class="stat-value">847</div>
+            <div class="stat-meta"><span class="stat-badge badge-green">↑ 4.2%</span> vs yesterday</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Answer %</div>
+            <div class="stat-value">91.3%</div>
+            <div class="stat-meta"><span class="stat-badge badge-green">✓ On Target</span></div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">Abandon %</div>
+            <div class="stat-value">8.7%</div>
+            <div class="stat-meta"><span class="stat-badge badge-yellow">⚠ Above 6%</span></div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Avg Wait</div>
+            <div class="stat-value mono">1:42</div>
+            <div class="stat-meta">mm:ss · target &lt;0:30</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">ASA</div>
+            <div class="stat-value mono">0:38</div>
+            <div class="stat-meta">Avg speed of answer</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Unstaffed Events</div>
+            <div class="stat-value">3</div>
+            <div class="stat-meta"><span class="stat-badge badge-red">↑ needs review</span></div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Avg ATS Score</div>
+            <div class="stat-value">84.2</div>
+            <div class="stat-meta"><span class="stat-badge badge-green">↑ from 81.5</span></div>
+          </div>
+        </div>
+
+        <!-- FLAGS + UNSTAFFED -->
+        <div class="two-col">
+          <div>
+            <div class="section-header">
+              <div class="section-title">Active Flags</div>
+              <button class="btn" onclick="setNavByName('flags')">View All</button>
+            </div>
+            <div class="alerts-panel">
+              <div class="panel-header"><span class="panel-title">Needs Attention</span></div>
+              <div class="alert-item">
+                <div class="alert-dot dot-red"></div>
+                <div class="alert-body">
+                  <div class="alert-title">Call in queue 4:12 — no agent answered</div>
+                  <div class="alert-detail">Queue: ATS Escalations · Agent: Chris Lee</div>
+                  <div class="alert-time">Today 09:14</div>
+                </div>
+              </div>
+              <div class="alert-item">
+                <div class="alert-dot dot-red"></div>
+                <div class="alert-body">
+                  <div class="alert-title">Abandon spike — 3 consecutive abandons</div>
+                  <div class="alert-detail">Queue: General Support · 08:45–09:02</div>
+                  <div class="alert-time">Today 09:02</div>
+                </div>
+              </div>
+              <div class="alert-item">
+                <div class="alert-dot dot-yellow"></div>
+                <div class="alert-body">
+                  <div class="alert-title">Agent missed 2 alerts in 30 min window</div>
+                  <div class="alert-detail">Agent: Sam Patel · Shift: Morning</div>
+                  <div class="alert-time">Today 10:30</div>
+                </div>
+              </div>
+              <div class="alert-item">
+                <div class="alert-dot dot-yellow"></div>
+                <div class="alert-body">
+                  <div class="alert-title">Process failure — ATS review score &lt;60</div>
+                  <div class="alert-detail">Agent: Dana Brooks · Score: 54/100</div>
+                  <div class="alert-time">June 14</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-header">
+              <div class="section-title">Review Score Summary</div>
+              <button class="btn" onclick="setNavByName('reviews')">Full Report</button>
+            </div>
+            <div class="table-wrap">
+              <div class="panel-header"><span class="panel-title">ATS Escalation Averages</span></div>
+              <div style="padding: 12px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                  <span style="font-size:12px; color:var(--text-muted);">Alex Turner</span>
+                  <div class="score-bar-wrap" style="width:240px;">
+                    <div class="score-bar-bg"><div class="score-bar-fill" style="width:94%;background:var(--green);"></div></div>
+                    <span class="score-val" style="color:var(--green);">94.1</span>
+                    <span class="flag flag-green">Excellent</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                  <span style="font-size:12px; color:var(--text-muted);">Maria Santos</span>
+                  <div class="score-bar-wrap" style="width:240px;">
+                    <div class="score-bar-bg"><div class="score-bar-fill" style="width:88%;background:var(--green);"></div></div>
+                    <span class="score-val" style="color:var(--green);">88.6</span>
+                    <span class="flag flag-green">Good</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                  <span style="font-size:12px; color:var(--text-muted);">Chris Lee</span>
+                  <div class="score-bar-wrap" style="width:240px;">
+                    <div class="score-bar-bg"><div class="score-bar-fill" style="width:81%;background:var(--accent);"></div></div>
+                    <span class="score-val" style="color:var(--accent);">81.2</span>
+                    <span class="flag" style="background:var(--accent-soft);color:var(--accent);">Average</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                  <span style="font-size:12px; color:var(--text-muted);">Dana Brooks</span>
+                  <div class="score-bar-wrap" style="width:240px;">
+                    <div class="score-bar-bg"><div class="score-bar-fill" style="width:69%;background:var(--yellow);"></div></div>
+                    <span class="score-val" style="color:var(--yellow);">69.4</span>
+                    <span class="flag flag-yellow">At Risk</span>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:12px; color:var(--text-muted);">Sam Patel</span>
+                  <div class="score-bar-wrap" style="width:240px;">
+                    <div class="score-bar-bg"><div class="score-bar-fill" style="width:76%;background:var(--accent);"></div></div>
+                    <span class="score-val" style="color:var(--accent);">76.8</span>
+                    <span class="flag" style="background:var(--accent-soft);color:var(--accent);">Average</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- QUEUE METRICS TAB -->
+      <div class="tab-panel" id="panel-queues">
+        <div class="section-header">
+          <div class="section-title">Queue Performance</div>
+          <span style="font-size:11px;color:var(--text-muted);">All times mm:ss</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Queue Name</th>
+                <th>Offers</th>
+                <th>Answer %</th>
+                <th>Abandon %</th>
+                <th>Avg Wait</th>
+                <th>Avg Talk</th>
+                <th>ASA</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:600;">ATS Escalations</td>
+                <td class="mono">312</td>
+                <td class="mono"><span style="color:var(--green);">94.2%</span></td>
+                <td class="mono"><span style="color:var(--green);">5.8%</span></td>
+                <td class="mono"><span style="color:var(--red);">1:18</span></td>
+                <td class="mono">4:32</td>
+                <td class="mono">0:29</td>
+                <td><span class="flag flag-yellow">Wait ↑</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;">General Support</td>
+                <td class="mono">287</td>
+                <td class="mono"><span style="color:var(--yellow);">88.5%</span></td>
+                <td class="mono"><span style="color:var(--yellow);">11.5%</span></td>
+                <td class="mono"><span style="color:var(--red);">2:04</span></td>
+                <td class="mono">5:11</td>
+                <td class="mono">0:47</td>
+                <td><span class="flag flag-red">Critical</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;">Tier 2 Escalation</td>
+                <td class="mono">148</td>
+                <td class="mono"><span style="color:var(--green);">96.6%</span></td>
+                <td class="mono"><span style="color:var(--green);">3.4%</span></td>
+                <td class="mono"><span style="color:var(--red);">0:58</span></td>
+                <td class="mono">7:44</td>
+                <td class="mono">0:22</td>
+                <td><span class="flag flag-yellow">Wait ↑</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;">After Hours</td>
+                <td class="mono">62</td>
+                <td class="mono"><span style="color:var(--red);">79.0%</span></td>
+                <td class="mono"><span style="color:var(--red);">21.0%</span></td>
+                <td class="mono"><span style="color:var(--red);">3:44</span></td>
+                <td class="mono">3:52</td>
+                <td class="mono">1:14</td>
+                <td><span class="flag flag-red">Critical</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;">Overflow</td>
+                <td class="mono">38</td>
+                <td class="mono"><span style="color:var(--accent);">84.2%</span></td>
+                <td class="mono"><span style="color:var(--yellow);">15.8%</span></td>
+                <td class="mono"><span style="color:var(--red);">2:31</span></td>
+                <td class="mono">4:08</td>
+                <td class="mono">0:58</td>
+                <td><span class="flag flag-red">Critical</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AGENT METRICS TAB -->
+      <div class="tab-panel" id="panel-agents">
+        <div class="section-header">
+          <div class="section-title">Agent Performance</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>Alerts</th>
+                <th>Alerts Not Answered</th>
+                <th>Avg Handle Time</th>
+                <th>Avg Alert Time</th>
+                <th>On Queue Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="agent-table-body">
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;background:var(--green);">AT</div><span style="font-weight:600;">Alex Turner</span></div></td>
+                <td class="mono">68</td>
+                <td class="mono"><span style="color:var(--green);">1</span></td>
+                <td class="mono">4:12</td>
+                <td class="mono">0:28</td>
+                <td class="mono">6h 42m</td>
+                <td><span class="flag flag-green">Strong</span></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;background:var(--green);">MS</div><span style="font-weight:600;">Maria Santos</span></div></td>
+                <td class="mono">74</td>
+                <td class="mono"><span style="color:var(--green);">2</span></td>
+                <td class="mono">3:58</td>
+                <td class="mono">0:31</td>
+                <td class="mono">7h 01m</td>
+                <td><span class="flag flag-green">Strong</span></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;background:var(--yellow);">CL</div><span style="font-weight:600;">Chris Lee</span></div></td>
+                <td class="mono">59</td>
+                <td class="mono"><span style="color:var(--red);">7</span></td>
+                <td class="mono">5:44</td>
+                <td class="mono">0:52</td>
+                <td class="mono">5h 18m</td>
+                <td><span class="flag flag-red">⚑ Flagged</span></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;background:var(--yellow);">DB</div><span style="font-weight:600;">Dana Brooks</span></div></td>
+                <td class="mono">61</td>
+                <td class="mono"><span style="color:var(--yellow);">4</span></td>
+                <td class="mono">4:38</td>
+                <td class="mono">0:41</td>
+                <td class="mono">6h 05m</td>
+                <td><span class="flag flag-yellow">Watch</span></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;background:var(--accent);">SP</div><span style="font-weight:600;">Sam Patel</span></div></td>
+                <td class="mono">55</td>
+                <td class="mono"><span style="color:var(--yellow);">5</span></td>
+                <td class="mono">4:22</td>
+                <td class="mono">0:38</td>
+                <td class="mono">5h 52m</td>
+                <td><span class="flag flag-yellow">Watch</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- UNSTAFFED TAB -->
+      <div class="tab-panel" id="panel-unstaffed">
+        <div class="section-header">
+          <div class="section-title">Unstaffed Queue Events</div>
+          <span class="flag flag-red">3 events today</span>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+          <div class="stat-card red">
+            <div class="stat-label">Events Today</div>
+            <div class="stat-value">3</div>
+            <div class="stat-meta">Queues with 0 agents</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">Longest Gap</div>
+            <div class="stat-value mono">14:22</div>
+            <div class="stat-meta">After Hours · 06:12</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Total Exposure</div>
+            <div class="stat-value mono">24:08</div>
+            <div class="stat-meta">Combined unstaffed time</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="panel-header"><span class="panel-title">Unstaffed Timeline</span></div>
+          <div class="unstaffed-item">
+            <span class="unstaffed-queue" style="color:var(--red);">After Hours</span>
+            <span class="unstaffed-time">06:12 – 06:26</span>
+            <div class="duration-bar-wrap">
+              <div class="duration-bar" style="width:80%;"></div>
+              <span class="duration-label">14:22</span>
+            </div>
+          </div>
+          <div class="unstaffed-item">
+            <span class="unstaffed-queue" style="color:var(--yellow);">General Support</span>
+            <span class="unstaffed-time">11:58 – 12:05</span>
+            <div class="duration-bar-wrap">
+              <div class="duration-bar" style="width:40%; background:var(--yellow);"></div>
+              <span class="duration-label" style="color:var(--yellow);">7:04</span>
+            </div>
+          </div>
+          <div class="unstaffed-item">
+            <span class="unstaffed-queue" style="color:var(--yellow);">Overflow</span>
+            <span class="unstaffed-time">14:31 – 14:33</span>
+            <div class="duration-bar-wrap">
+              <div class="duration-bar" style="width:14%; background:var(--accent);"></div>
+              <span class="duration-label" style="color:var(--accent);">2:42</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLAGS TAB -->
+      <div class="tab-panel" id="panel-flags">
+        <div class="section-header">
+          <div class="section-title">Flagged Items for Follow-up</div>
+          <span style="font-size:11px;color:var(--text-muted);">Auto-generated · Today</span>
+        </div>
+
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+          <div class="stat-card red">
+            <div class="stat-label">Critical Flags</div>
+            <div class="stat-value">3</div>
+            <div class="stat-meta">Require immediate review</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">Watch Items</div>
+            <div class="stat-value">4</div>
+            <div class="stat-meta">Monitor closely</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Agents Flagged</div>
+            <div class="stat-value">2</div>
+            <div class="stat-meta">Chris Lee · Dana Brooks</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="panel-header"><span class="panel-title">All Flags</span></div>
+          <table>
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Type</th>
+                <th>Detail</th>
+                <th>Agent / Queue</th>
+                <th>Time</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="flag flag-red">Critical</span></td>
+                <td>Long Queue Wait</td>
+                <td>Call held 4:12 — threshold 0:30</td>
+                <td>Chris Lee / ATS Escalations</td>
+                <td class="mono">09:14</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+              <tr>
+                <td><span class="flag flag-red">Critical</span></td>
+                <td>Abandon Spike</td>
+                <td>3 consecutive abandons in 17 min</td>
+                <td>General Support</td>
+                <td class="mono">09:02</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+              <tr>
+                <td><span class="flag flag-red">Critical</span></td>
+                <td>Process Failure</td>
+                <td>ATS review score 54/100 — critical fail</td>
+                <td>Dana Brooks</td>
+                <td class="mono">Jun 14</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+              <tr>
+                <td><span class="flag flag-yellow">Watch</span></td>
+                <td>Missed Alerts</td>
+                <td>5 unanswered alerts — high for shift</td>
+                <td>Sam Patel</td>
+                <td class="mono">Today</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+              <tr>
+                <td><span class="flag flag-yellow">Watch</span></td>
+                <td>Missed Alerts</td>
+                <td>7 unanswered alerts this period</td>
+                <td>Chris Lee</td>
+                <td class="mono">Today</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+              <tr>
+                <td><span class="flag flag-yellow">Watch</span></td>
+                <td>High AHT</td>
+                <td>Avg handle time 5:44 — above 5:00 target</td>
+                <td>Chris Lee</td>
+                <td class="mono">Today</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+              <tr>
+                <td><span class="flag flag-yellow">Watch</span></td>
+                <td>Unstaffed Queue</td>
+                <td>After Hours queue 0 agents for 14:22</td>
+                <td>After Hours</td>
+                <td class="mono">06:12</td>
+                <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REVIEWS TAB -->
+      <div class="tab-panel" id="panel-reviews">
+        <div class="section-header">
+          <div class="section-title">ATS Escalation Reviews</div>
+        </div>
+
+        <div class="review-filter-bar">
+          <span style="font-size:11px;color:var(--text-muted);padding:5px 0;font-weight:600;">FILTER:</span>
+          <div class="chip active" onclick="toggleChip(this)">All Time</div>
+          <div class="chip" onclick="toggleChip(this)">This Week</div>
+          <div class="chip" onclick="toggleChip(this)">This Month</div>
+          <span style="width:1px;background:var(--border);margin:0 4px;"></span>
+          <div class="chip green" onclick="toggleChip(this)">P1 — High</div>
+          <div class="chip" onclick="toggleChip(this)">P2 — Medium</div>
+          <div class="chip" onclick="toggleChip(this)">P3 — Low</div>
+          <span style="width:1px;background:var(--border);margin:0 4px;"></span>
+          <div class="chip red" onclick="toggleChip(this)">Process Failures Only</div>
+        </div>
+
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:20px;">
+          <div class="stat-card blue">
+            <div class="stat-label">Total Reviews</div>
+            <div class="stat-value">47</div>
+            <div class="stat-meta">This period</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Team Avg Score</div>
+            <div class="stat-value">84.2</div>
+            <div class="stat-meta">out of 100</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Process Failures</div>
+            <div class="stat-value">2</div>
+            <div class="stat-meta">Critical failure triggered</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">At-Risk Agents</div>
+            <div class="stat-value">1</div>
+            <div class="stat-meta">Score avg below 75</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ESC #</th>
+                <th>Agent</th>
+                <th>Date</th>
+                <th>Priority</th>
+                <th>Total Score</th>
+                <th>Rating</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4821</td>
+                <td style="font-weight:600;">Alex Turner</td>
+                <td class="mono">Jun 16</td>
+                <td><span class="flag flag-red">P1</span></td>
+                <td class="mono" style="color:var(--green);">96</td>
+                <td><span class="flag flag-green">Excellent</span></td>
+                <td><span class="flag flag-green">Pass</span></td>
+              </tr>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4819</td>
+                <td style="font-weight:600;">Maria Santos</td>
+                <td class="mono">Jun 15</td>
+                <td><span class="flag flag-yellow">P2</span></td>
+                <td class="mono" style="color:var(--green);">89</td>
+                <td><span class="flag flag-green">Good</span></td>
+                <td><span class="flag flag-green">Pass</span></td>
+              </tr>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4817</td>
+                <td style="font-weight:600;">Chris Lee</td>
+                <td class="mono">Jun 15</td>
+                <td><span class="flag flag-red">P1</span></td>
+                <td class="mono" style="color:var(--accent);">78</td>
+                <td><span class="flag" style="background:var(--accent-soft);color:var(--accent);">Average</span></td>
+                <td><span class="flag flag-green">Pass</span></td>
+              </tr>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4812</td>
+                <td style="font-weight:600;">Dana Brooks</td>
+                <td class="mono">Jun 14</td>
+                <td><span class="flag flag-red">P1</span></td>
+                <td class="mono" style="color:var(--red);">54</td>
+                <td><span class="flag flag-red">Process Failure</span></td>
+                <td><span class="flag flag-red">FAIL</span></td>
+              </tr>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4808</td>
+                <td style="font-weight:600;">Sam Patel</td>
+                <td class="mono">Jun 13</td>
+                <td><span class="flag" style="background:var(--surface2);color:var(--text-muted);">P3</span></td>
+                <td class="mono" style="color:var(--accent);">77</td>
+                <td><span class="flag" style="background:var(--accent-soft);color:var(--accent);">Average</span></td>
+                <td><span class="flag flag-green">Pass</span></td>
+              </tr>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4801</td>
+                <td style="font-weight:600;">Alex Turner</td>
+                <td class="mono">Jun 12</td>
+                <td><span class="flag flag-yellow">P2</span></td>
+                <td class="mono" style="color:var(--green);">92</td>
+                <td><span class="flag flag-green">Excellent</span></td>
+                <td><span class="flag flag-green">Pass</span></td>
+              </tr>
+              <tr>
+                <td class="mono" style="color:var(--accent);">ESC-4796</td>
+                <td style="font-weight:600;">Dana Brooks</td>
+                <td class="mono">Jun 11</td>
+                <td><span class="flag flag-yellow">P2</span></td>
+                <td class="mono" style="color:var(--yellow);">68</td>
+                <td><span class="flag flag-yellow">At Risk</span></td>
+                <td><span class="flag flag-yellow">Near Fail</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- THRESHOLD SETTINGS PANEL -->
+      <div class="tab-panel" id="panel-thresholds">
+
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+          <div>
+            <div class="section-title" style="margin-bottom:4px;">Flag Threshold Settings</div>
+            <div style="font-size:12px;color:var(--text-muted);">Changes apply immediately to flag detection across all views.</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="resetThresholds()">↺ Reset to Defaults</button>
+            <button class="btn btn-primary" onclick="saveThresholds()">✓ Save Changes</button>
+          </div>
+        </div>
+
+        <!-- SAVE CONFIRMATION -->
+        <div id="save-toast" style="display:none; background:var(--green-soft); border:1px solid var(--green); border-radius:var(--radius); padding:10px 16px; margin-bottom:16px; font-size:13px; color:var(--green); font-weight:600;">
+          ✓ Thresholds saved. Flag engine will apply updated rules on next refresh.
+        </div>
+
+        <!-- CALL QUEUE THRESHOLDS -->
+        <div class="table-wrap" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <span class="panel-title">📞 Call Queue Flags</span>
+            <span style="font-size:11px;color:var(--text-muted);">Source: Genesys Cloud</span>
+          </div>
+          <div style="padding:20px; display:flex; flex-direction:column; gap:20px;">
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Long Queue Wait <span class="flag flag-red">Critical</span></div>
+                <div class="threshold-desc">Flag any call that waits in queue longer than this duration before being answered or abandoned.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Trigger after (seconds)</label>
+                <div class="input-row">
+                  <input type="number" id="t-queue-wait" value="30" min="5" max="300" step="5">
+                  <span class="unit-label">sec</span>
+                  <span class="preview-val" id="prev-queue-wait">= 0:30</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Abandon Spike <span class="flag flag-red">Critical</span></div>
+                <div class="threshold-desc">Flag when this many consecutive abandons occur within the rolling time window.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Consecutive abandons</label>
+                <div class="input-row">
+                  <input type="number" id="t-abandon-count" value="3" min="1" max="20">
+                  <span class="unit-label">calls</span>
+                </div>
+                <label style="margin-top:10px;">Within window</label>
+                <div class="input-row">
+                  <input type="number" id="t-abandon-window" value="20" min="5" max="120" step="5">
+                  <span class="unit-label">min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Abandon % Warning <span class="flag flag-yellow">Watch</span></div>
+                <div class="threshold-desc">Flag queues where the abandon rate exceeds this percentage over the selected time period.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Abandon rate above</label>
+                <div class="input-row">
+                  <input type="number" id="t-abandon-pct" value="6" min="1" max="50">
+                  <span class="unit-label">%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Unstaffed Queue <span class="flag flag-yellow">Watch</span></div>
+                <div class="threshold-desc">Flag when a queue has zero staffed agents for longer than this duration.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Unstaffed for longer than</label>
+                <div class="input-row">
+                  <input type="number" id="t-unstaffed" value="2" min="1" max="60">
+                  <span class="unit-label">min</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- AGENT THRESHOLDS -->
+        <div class="table-wrap" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <span class="panel-title">👤 Agent Performance Flags</span>
+            <span style="font-size:11px;color:var(--text-muted);">Source: Genesys Cloud</span>
+          </div>
+          <div style="padding:20px; display:flex; flex-direction:column; gap:20px;">
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Missed Alerts — Watch <span class="flag flag-yellow">Watch</span></div>
+                <div class="threshold-desc">Flag an agent when unanswered alerts reach or exceed this count in a single shift.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Unanswered alerts ≥</label>
+                <div class="input-row">
+                  <input type="number" id="t-missed-watch" value="4" min="1" max="30">
+                  <span class="unit-label">alerts</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Missed Alerts — Critical <span class="flag flag-red">Critical</span></div>
+                <div class="threshold-desc">Escalate to Critical when unanswered alerts reach this higher count in a single shift.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Unanswered alerts ≥</label>
+                <div class="input-row">
+                  <input type="number" id="t-missed-critical" value="7" min="1" max="30">
+                  <span class="unit-label">alerts</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">High Avg Handle Time <span class="flag flag-yellow">Watch</span></div>
+                <div class="threshold-desc">Flag agents whose average handle time exceeds this target for the selected period.</div>
+              </div>
+              <div class="threshold-control">
+                <label>AHT above (minutes)</label>
+                <div class="input-row">
+                  <input type="number" id="t-aht" value="5" min="1" max="30">
+                  <span class="unit-label">min</span>
+                  <span class="preview-val" id="prev-aht">= 5:00</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Low On-Queue Time <span class="flag flag-yellow">Watch</span></div>
+                <div class="threshold-desc">Flag agents who spend less than this amount of time on-queue during their shift.</div>
+              </div>
+              <div class="threshold-control">
+                <label>On-queue time below</label>
+                <div class="input-row">
+                  <input type="number" id="t-onqueue" value="5" min="1" max="12" step="0.5">
+                  <span class="unit-label">hrs</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- REVIEW SCORE THRESHOLDS -->
+        <div class="table-wrap" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <span class="panel-title">✦ ATS Review Score Flags</span>
+            <span style="font-size:11px;color:var(--text-muted);">Source: SharePoint Excel</span>
+          </div>
+          <div style="padding:20px; display:flex; flex-direction:column; gap:20px;">
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">At-Risk Score <span class="flag flag-yellow">Watch</span></div>
+                <div class="threshold-desc">Flag a review as "At Risk" when the total score falls below this value. Does not trigger process failure.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Score below</label>
+                <div class="input-row">
+                  <input type="number" id="t-score-watch" value="75" min="50" max="99">
+                  <span class="unit-label">/ 100</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Process Failure Score <span class="flag flag-red">Critical</span></div>
+                <div class="threshold-desc">Score threshold below which a review is automatically classified as a Process Failure, regardless of individual metric ratings.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Score below</label>
+                <div class="input-row">
+                  <input type="number" id="t-score-fail" value="60" min="0" max="80">
+                  <span class="unit-label">/ 100</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="threshold-divider"></div>
+
+            <div class="threshold-row">
+              <div class="threshold-info">
+                <div class="threshold-name">Consecutive Low Scores <span class="flag flag-red">Critical</span></div>
+                <div class="threshold-desc">Flag an agent for follow-up coaching when they receive this many at-risk or failing scores in a row.</div>
+              </div>
+              <div class="threshold-control">
+                <label>Consecutive low reviews ≥</label>
+                <div class="input-row">
+                  <input type="number" id="t-consec-low" value="2" min="1" max="10">
+                  <span class="unit-label">reviews</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<script>
+  const panels = {
+    overview: { title: 'Dashboard', breadcrumb: 'Today · June 16, 2026' },
+    queues: { title: 'Queue Metrics', breadcrumb: 'Genesys Cloud · Live Data' },
+    agents: { title: 'Agent Metrics', breadcrumb: 'Genesys Cloud · Live Data' },
+    unstaffed: { title: 'Unstaffed Queue Events', breadcrumb: 'Genesys Cloud · Today' },
+    flags: { title: 'Flagged Items', breadcrumb: 'Auto-generated · Review Required' },
+    reviews: { title: 'ATS Escalation Reviews', breadcrumb: 'SharePoint Excel · Current Period' },
+    thresholds: { title: 'Flag Threshold Settings', breadcrumb: 'Manager Access · Applies to all flag views' }
+  };
+
+  function setNav(btn, panelKey) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    btn.classList.add('active');
+    showPanel(panelKey);
+  }
+
+  function setNavByName(panelKey) {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(panelKey)) {
+        n.classList.add('active');
+      } else {
+        n.classList.remove('active');
+      }
+    });
+    showPanel(panelKey);
+  }
+
+  function showPanel(panelKey) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + panelKey).classList.add('active');
+    document.getElementById('page-title').textContent = panels[panelKey].title;
+    document.getElementById('page-breadcrumb').textContent = panels[panelKey].breadcrumb;
+  }
+
+  function applyAgentFilter() {
+    const val = document.getElementById('agent-filter').value;
+    const rows = document.querySelectorAll('#agent-table-body tr');
+    rows.forEach(row => {
+      const name = row.querySelector('span[style*="font-weight"]');
+      if (!name) return;
+      row.style.display = (val === 'all' || name.textContent === val) ? '' : 'none';
+    });
+  }
+
+  function toggleChip(el) {
+    el.classList.toggle('active');
+  }
+
+  // Threshold defaults
+  const DEFAULTS = {
+    'queue-wait': 30, 'abandon-count': 3, 'abandon-window': 20,
+    'abandon-pct': 6, 'unstaffed': 2, 'missed-watch': 4,
+    'missed-critical': 7, 'aht': 5, 'onqueue': 5,
+    'score-watch': 75, 'score-fail': 60, 'consec-low': 2
+  };
+
+  function secToMmss(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m + ':' + String(sec).padStart(2, '0');
+  }
+
+  // Live preview updates
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 't-queue-wait') {
+      const el = document.getElementById('prev-queue-wait');
+      if (el) el.textContent = '= ' + secToMmss(parseInt(e.target.value) || 0);
+    }
+    if (e.target.id === 't-aht') {
+      const el = document.getElementById('prev-aht');
+      if (el) el.textContent = '= ' + (parseInt(e.target.value) || 0) + ':00';
+    }
+  });
+
+  function saveThresholds() {
+    const toast = document.getElementById('save-toast');
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+  }
+
+  function resetThresholds() {
+    Object.entries(DEFAULTS).forEach(([key, val]) => {
+      const el = document.getElementById('t-' + key);
+      if (el) el.value = val;
+    });
+    const qw = document.getElementById('prev-queue-wait');
+    if (qw) qw.textContent = '= ' + secToMmss(DEFAULTS['queue-wait']);
+    const aht = document.getElementById('prev-aht');
+    if (aht) aht.textContent = '= ' + DEFAULTS['aht'] + ':00';
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIVE DATA LAYER
+  // Reads credentials from config.js (must be in same folder as this file).
+  // config.js must define: window.CONFIG = { genesys:{...}, sharepoint:{...} }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let liveData     = { queues: [], agents: [], unstaffed: [], flags: [], reviews: [] };
+  let autoRefreshTimer = null;
+  const AUTO_REFRESH_MS = 5 * 60 * 1000;
+
+  // ── GENESYS — via Cloudflare Worker ─────────────────────────────────────
+  // Auth is handled server-side in the Worker. The dashboard just calls the
+  // Worker URL with an X-Genesys-Path header telling it which API to hit.
+
+  async function genesysGet(path) {
+    const resp = await fetch(CONFIG.genesys.workerUrl, {
+      method:  'GET',
+      headers: { 'Content-Type': 'application/json', 'X-Genesys-Path': path },
+    });
+    if (!resp.ok) throw new Error('Genesys Worker error ' + resp.status + ' on ' + path);
+    return resp.json();
+  }
+
+  async function genesysPost(path, body) {
+    const resp = await fetch(CONFIG.genesys.workerUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Genesys-Path': path },
+      body:    JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error('Genesys Worker error ' + resp.status + ' on ' + path);
+    return resp.json();
+  }
+
+  function getThreshold(key) {
+    const el = document.getElementById('t-' + key);
+    return el ? parseFloat(el.value) : DEFAULTS[key];
+  }
+
+  function msToMmss(ms) {
+    if (!ms || ms < 0) return '0:00';
+    const total = Math.floor(ms / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function msToHm(ms) {
+    if (!ms || ms < 0) return '0h 0m';
+    const total = Math.floor(ms / 1000 / 60);
+    return Math.floor(total / 60) + 'h ' + (total % 60) + 'm';
+  }
+
+  function pct(n, d) {
+    if (!d || d === 0) return '0.0%';
+    return ((n / d) * 100).toFixed(1) + '%';
+  }
+
+  function showLoadingOverlay(msg) {
+    let el = document.getElementById('loading-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'loading-overlay';
+      el.style.cssText = `
+        position:fixed; inset:0; background:rgba(13,17,23,0.82);
+        display:flex; align-items:center; justify-content:center;
+        z-index:9999; flex-direction:column; gap:14px;
+      `;
+      el.innerHTML = `
+        <div style="width:40px;height:40px;border:3px solid #30363d;border-top-color:#2f81f7;
+          border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        <div id="loading-msg" style="color:#e6edf3;font-size:14px;font-weight:500;"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      `;
+      document.body.appendChild(el);
+    }
+    el.style.display = 'flex';
+    document.getElementById('loading-msg').textContent = msg || 'Loading…';
+  }
+
+  function hideLoadingOverlay() {
+    const el = document.getElementById('loading-overlay');
+    if (el) el.style.display = 'none';
+  }
+
+  function showBanner(msg, type) {
+    let el = document.getElementById('data-banner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'data-banner';
+      el.style.cssText = `
+        position:fixed; bottom:20px; right:20px; max-width:380px;
+        padding:12px 18px; border-radius:8px; font-size:13px;
+        font-weight:500; z-index:9998; border:1px solid;
+        transition:opacity 0.3s;
+      `;
+      document.body.appendChild(el);
+    }
+    const styles = {
+      success: { bg:'rgba(63,185,80,0.15)', border:'#3fb950', color:'#3fb950' },
+      error:   { bg:'rgba(248,81,73,0.15)', border:'#f85149', color:'#f85149' },
+      info:    { bg:'rgba(47,129,247,0.15)', border:'#2f81f7', color:'#2f81f7' },
+    };
+    const s = styles[type] || styles.info;
+    el.style.background = s.bg;
+    el.style.borderColor = s.border;
+    el.style.color = s.color;
+    el.textContent = msg;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 4000);
+  }
+
+  function checkConfig() {
+    if (typeof CONFIG === 'undefined') {
+      showBanner('⚠ CONFIG not found — check the top of the HTML file.', 'error');
+      return false;
+    }
+    if (!CONFIG.genesys?.workerUrl || CONFIG.genesys.workerUrl.includes('PASTE')) {
+      showBanner('⚠ Worker URL not set — deploy the Cloudflare Worker first and paste the URL into CONFIG.', 'error');
+      return false;
+    }
+    return true;
+  }
+
+
+  // ── GENESYS: Queue Stats ─────────────────────────────────────────────────
+  async function fetchQueueStats() {
+    const now   = new Date();
+    const start = new Date(now); start.setHours(0, 0, 0, 0);
+
+    const body = {
+      interval: start.toISOString() + '/' + now.toISOString(),
+      granularity: 'PT1H',
+      groupBy: ['queueId'],
+      filter: {
+        type: 'and',
+        predicates: [{
+          type: 'dimension', dimension: 'queueId',
+          operator: 'matches',
+          value: CONFIG.genesys.queueIds.join('|')
+        }]
+      },
+      metrics: [
+        'nOffered','nAnswered','nAbandoned',
+        'tAbandon','tHandle','tAnswered',
+        'oServiceLevel','tWait','tAcd'
+      ],
+      flattenMultivaluedDimensions: true
+    };
+
+    const resp = await genesysPost('/api/v2/analytics/queues/observations/query', body);
+
+    // Also fetch queue names
+    const queueNames = {};
+    for (const qid of CONFIG.genesys.queueIds) {
+      try {
+        const q = await genesysGet('/api/v2/routing/queues/' + qid);
+        queueNames[qid] = q.name || qid;
+      } catch(e) { queueNames[qid] = qid; }
+    }
+
+    return (resp.results || []).map(r => {
+      const g   = r.group || {};
+      const d   = (r.data || [])[0]?.metrics || {};
+      const qid = g.queueId;
+
+      const offered   = d.nOffered?.stats?.count   || 0;
+      const answered  = d.nAnswered?.stats?.count  || 0;
+      const abandoned = d.nAbandoned?.stats?.count || 0;
+      const tWait     = d.tWait?.stats?.sum         || 0;
+      const tHandle   = d.tHandle?.stats?.sum       || 0;
+      const tAnswered = d.tAnswered?.stats?.sum     || 0;
+
+      const answerPct  = offered > 0 ? (answered  / offered * 100) : 0;
+      const abandonPct = offered > 0 ? (abandoned / offered * 100) : 0;
+      const avgWait    = answered > 0 ? tWait / answered : 0;
+      const avgTalk    = answered > 0 ? tHandle / answered : 0;
+      const asa        = answered > 0 ? tAnswered / answered : 0;
+
+      const waitThreshMs = getThreshold('queue-wait') * 1000;
+      const abPctThr     = getThreshold('abandon-pct');
+
+      let status = 'On Target';
+      let statusClass = 'flag-green';
+      if (abandonPct > abPctThr * 2 || answerPct < 80) { status = 'Critical'; statusClass = 'flag-red'; }
+      else if (abandonPct > abPctThr || avgWait > waitThreshMs) { status = 'Watch'; statusClass = 'flag-yellow'; }
+
+      return {
+        queueId: qid,
+        name: queueNames[qid] || qid,
+        offered, answered, abandoned,
+        answerPct, abandonPct,
+        avgWait, avgTalk, asa,
+        status, statusClass
+      };
+    });
+  }
+
+  // ── GENESYS: Agent Stats ─────────────────────────────────────────────────
+  async function fetchAgentStats() {
+    const now   = new Date();
+    const start = new Date(now); start.setHours(0, 0, 0, 0);
+
+    // Fetch all users in the org queues
+    const usersResp = await genesysGet('/api/v2/users?pageSize=100&expand=presence');
+    const users = (usersResp.entities || []);
+
+    const body = {
+      interval: start.toISOString() + '/' + now.toISOString(),
+      granularity: 'PT1H',
+      groupBy: ['userId'],
+      filter: {
+        type: 'and',
+        predicates: [{
+          type: 'dimension', dimension: 'queueId',
+          operator: 'matches',
+          value: CONFIG.genesys.queueIds.join('|')
+        }]
+      },
+      metrics: [
+        'nAlerts','nNotResponding','tHandle','tOnQueueMs',
+        'oTotalCriticalScore'
+      ],
+      flattenMultivaluedDimensions: true
+    };
+
+    const resp = await genesysPost('/api/v2/analytics/users/aggregates/query', body);
+
+    const missedWatchThr    = getThreshold('missed-watch');
+    const missedCriticalThr = getThreshold('missed-critical');
+    const ahtThrMs          = getThreshold('aht') * 60 * 1000;
+
+    const userMap = {};
+    users.forEach(u => { userMap[u.id] = u.name || u.id; });
+
+    return (resp.results || []).map(r => {
+      const uid  = r.group?.userId;
+      const d    = (r.data || [])[0]?.metrics || {};
+
+      const alerts        = d.nAlerts?.stats?.count       || 0;
+      const notAnswered   = d.nNotResponding?.stats?.count || 0;
+      const tHandle       = d.tHandle?.stats?.sum          || 0;
+      const tOnQueue      = d.tOnQueueMs?.stats?.sum       || 0;
+      const avgAlertTime  = d.oTotalCriticalScore?.stats?.sum || 0;
+      const avgHandle     = alerts > 0 ? tHandle / alerts : 0;
+
+      let status = 'Strong', statusClass = 'flag-green';
+      if (notAnswered >= missedCriticalThr || avgHandle > ahtThrMs * 1.2) {
+        status = '⚑ Flagged'; statusClass = 'flag-red';
+      } else if (notAnswered >= missedWatchThr || avgHandle > ahtThrMs) {
+        status = 'Watch'; statusClass = 'flag-yellow';
+      }
+
+      const nameParts = (userMap[uid] || 'Unknown').split(' ');
+      const initials  = nameParts.map(p => p[0]).join('').slice(0,2).toUpperCase();
+
+      return {
+        userId: uid,
+        name: userMap[uid] || uid,
+        initials,
+        alerts, notAnswered,
+        avgHandle, avgAlertTime, tOnQueue,
+        status, statusClass
+      };
+    });
+  }
+
+  // ── GENESYS: Unstaffed Events ────────────────────────────────────────────
+  async function fetchUnstaffedEvents() {
+    const now   = new Date();
+    const start = new Date(now); start.setHours(0, 0, 0, 0);
+    const threshMin = getThreshold('unstaffed');
+    const events = [];
+
+    for (const qid of CONFIG.genesys.queueIds) {
+      try {
+        const resp = await genesysPost('/api/v2/analytics/queues/observations/query', {
+          interval: start.toISOString() + '/' + now.toISOString(),
+          granularity: 'PT5M',
+          groupBy: ['queueId'],
+          filter: { type: 'and', predicates: [{ type:'dimension', dimension:'queueId', operator:'matches', value: qid }] },
+          metrics: ['oOnQueueUsers'],
+          flattenMultivaluedDimensions: true
+        });
+
+        let qName = qid;
+        try { const q = await genesysGet('/api/v2/routing/queues/' + qid); qName = q.name || qid; } catch(e) {}
+
+        let gapStart = null;
+        for (const r of (resp.results || [])) {
+          for (const bucket of (r.data || [])) {
+            const onQueue = bucket.metrics?.oOnQueueUsers?.stats?.max || 0;
+            const ts      = new Date(bucket.interval?.split('/')[0]);
+            if (onQueue === 0) {
+              if (!gapStart) gapStart = ts;
+            } else {
+              if (gapStart) {
+                const durMs  = ts - gapStart;
+                const durMin = durMs / 1000 / 60;
+                if (durMin >= threshMin) {
+                  events.push({ queue: qName, start: gapStart, end: ts, durMs });
+                }
+                gapStart = null;
+              }
+            }
+          }
+        }
+      } catch(e) { console.warn('Unstaffed fetch failed for queue', qid, e); }
+    }
+
+    return events.sort((a, b) => b.durMs - a.durMs);
+  }
+
+  // ── SHAREPOINT: Excel Reviews ────────────────────────────────────────────
+  async function fetchReviews() {
+    const { fileUrl, sheetName } = CONFIG.sharepoint;
+    const graphToken = await getGraphToken();
+
+    let driveItemUrl;
+
+    // Detect personal OneDrive URL pattern (wwt-my.sharepoint.com/personal/...)
+    const personalMatch = fileUrl.match(/personal\/([^\/]+)/);
+    const sourcedocMatch = fileUrl.match(/sourcedoc=%7B([^%]+)%7D/i) ||
+                           fileUrl.match(/sourcedoc=\{([^}]+)\}/i);
+
+    if (personalMatch && sourcedocMatch) {
+      // Personal OneDrive — use /me/drive or user-specific drive endpoint
+      const userPath = personalMatch[1]; // e.g. schmitta_wwt_com
+      const fileId   = sourcedocMatch[1]; // GUID without braces
+      const hostname = new URL(fileUrl).hostname; // wwt-my.sharepoint.com
+
+      // Resolve the user's drive via Graph
+      const driveResp = await fetch(
+        `https://graph.microsoft.com/v1.0/users/${userPath.replace(/_/g, '.')}/drive/items/${fileId}`,
+        { headers: { Authorization: 'Bearer ' + graphToken } }
+      );
+
+      if (!driveResp.ok) {
+        // Fallback: try via shares/encoded URL
+        const encodedUrl = btoa(fileUrl.split('&action=')[0]).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+        const shareResp  = await fetch(
+          `https://graph.microsoft.com/v1.0/shares/u!${encodedUrl}/driveItem`,
+          { headers: { Authorization: 'Bearer ' + graphToken } }
+        );
+        if (!shareResp.ok) throw new Error('Could not access the OneDrive file. Make sure the file is shared with your org and your Microsoft account has access.');
+        const item = await shareResp.json();
+        driveItemUrl = `https://graph.microsoft.com/v1.0/drives/${item.parentReference.driveId}/items/${item.id}`;
+      } else {
+        const item = await driveResp.json();
+        driveItemUrl = `https://graph.microsoft.com/v1.0/drives/${item.parentReference.driveId}/items/${item.id}`;
+      }
+
+    } else {
+      // Team SharePoint site — original path-based resolution
+      const urlObj   = new URL(fileUrl);
+      const hostname = urlObj.hostname;
+      const pathParts = urlObj.pathname.split('/');
+      const siteIdx  = pathParts.indexOf('sites');
+      const siteName = siteIdx >= 0 ? pathParts[siteIdx + 1] : null;
+      if (!siteName) throw new Error('Could not parse SharePoint site name from URL.');
+
+      const siteResp = await fetch(
+        `https://graph.microsoft.com/v1.0/sites/${hostname}:/sites/${siteName}`,
+        { headers: { Authorization: 'Bearer ' + graphToken } }
+      );
+      if (!siteResp.ok) throw new Error('Could not find SharePoint site: ' + siteName);
+      const site = await siteResp.json();
+
+      const fileName  = pathParts[pathParts.length - 1].split('?')[0];
+      const driveResp = await fetch(
+        `https://graph.microsoft.com/v1.0/sites/${site.id}/drive/root:/${fileName}`,
+        { headers: { Authorization: 'Bearer ' + graphToken } }
+      );
+      if (!driveResp.ok) throw new Error('Could not find Excel file: ' + fileName);
+      const item = await driveResp.json();
+      driveItemUrl = `https://graph.microsoft.com/v1.0/sites/${site.id}/drive/items/${item.id}`;
+    }
+
+    // Read the worksheet rows via Graph workbook API
+    const encoded  = encodeURIComponent(sheetName);
+    const rowsResp = await fetch(
+      `${driveItemUrl}/workbook/worksheets('${encoded}')/usedRange`,
+      { headers: { Authorization: 'Bearer ' + graphToken } }
+    );
+    if (!rowsResp.ok) throw new Error(`Could not read sheet "${sheetName}". Check the tab name in your config matches exactly.`);
+    const rangeData = await rowsResp.json();
+    return parseReviewSheet(rangeData.values || []);
+  }
+
+  function parseReviewSheet(rows) {
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => String(h).trim().toLowerCase());
+
+    const col = {
+      esc:      headers.findIndex(h => h.includes('esc')),
+      agent:    headers.findIndex(h => h.includes('agent')),
+      score:    headers.findIndex(h => h.includes('score') && h.includes('total')),
+      rating:   headers.findIndex(h => h.includes('rating')),
+      date:     headers.findIndex(h => h.includes('date')),
+      priority: headers.findIndex(h => h.includes('priority')),
+    };
+
+    const scoreFail  = getThreshold('score-fail');
+    const scoreWatch = getThreshold('score-watch');
+
+    return rows.slice(1).map(row => {
+      const score    = parseFloat(row[col.score]) || 0;
+      const rawRating = col.rating >= 0 ? String(row[col.rating] || '') : '';
+
+      // Determine rating & status from score + any critical flag in the rating cell
+      const isCritical = rawRating.toLowerCase().includes('critical') ||
+                         rawRating.toLowerCase().includes('process fail') ||
+                         score < scoreFail;
+      let rating = rawRating || (score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= scoreWatch ? 'Average' : 'At Risk');
+      if (isCritical) rating = 'Process Failure';
+
+      const status      = isCritical ? 'FAIL' : score < scoreWatch ? 'Near Fail' : 'Pass';
+      const statusClass = isCritical ? 'flag-red' : score < scoreWatch ? 'flag-yellow' : 'flag-green';
+      const ratingClass = isCritical ? 'flag-red' : score >= 90 ? 'flag-green' : score >= 80 ? 'flag-green' : score >= scoreWatch ? '' : 'flag-yellow';
+
+      let priority = col.priority >= 0 ? String(row[col.priority] || '') : '';
+      const priorityClass = priority.includes('1') || priority.toLowerCase().includes('high')   ? 'flag-red'
+                          : priority.includes('2') || priority.toLowerCase().includes('med')    ? 'flag-yellow'
+                          : '';
+
+      return {
+        esc:      col.esc >= 0      ? String(row[col.esc] || '')   : '—',
+        agent:    col.agent >= 0    ? String(row[col.agent] || '') : '—',
+        score,
+        rating, ratingClass,
+        status, statusClass,
+        date:     col.date >= 0     ? String(row[col.date] || '')  : '—',
+        priority, priorityClass,
+        isCritical
+      };
+    }).filter(r => r.agent && r.agent !== '—');
+  }
+
+  // ── GRAPH TOKEN (SharePoint-hosted redirect flow) ───────────────────────
+  let graphToken_ = null;
+
+  async function getGraphToken() {
+    if (graphToken_) return graphToken_;
+
+    // Check if we're returning from a Microsoft login redirect (token in URL hash)
+    const hash = window.location.hash;
+    if (hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.slice(1));
+      const token  = params.get('access_token');
+      const expiresIn = parseInt(params.get('expires_in') || '3600');
+      if (token) {
+        graphToken_ = token;
+        sessionStorage.setItem('sd_graph_token', token);
+        sessionStorage.setItem('sd_graph_token_exp', String(Date.now() + expiresIn * 1000));
+        // Clean the token out of the URL bar without reloading
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        return token;
+      }
+    }
+
+    // Check sessionStorage for a token saved earlier this session
+    const saved = sessionStorage.getItem('sd_graph_token');
+    const savedExp = parseInt(sessionStorage.getItem('sd_graph_token_exp') || '0');
+    if (saved && Date.now() < savedExp - 60000) {
+      graphToken_ = saved;
+      return saved;
+    }
+    // After sign-in, Microsoft sends the user back to this same SharePoint page
+    // with the token appended to the URL hash. The check above catches it on return.
+    const clientId  = '04b07795-8542-4562-827d-ccf6b9be6b35'; // Graph Explorer public client
+    const scope     = encodeURIComponent('https://graph.microsoft.com/Files.Read.All Sites.Read.All');
+    const redirectUri = encodeURIComponent(window.location.href.split('#')[0]);
+
+    const loginUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize` +
+      `?client_id=${clientId}` +
+      `&response_type=token` +
+      `&redirect_uri=${redirectUri}` +
+      `&scope=${scope}` +
+      `&response_mode=fragment` +
+      `&prompt=select_account`;
+
+    // Save current panel so we can restore it after redirect
+    sessionStorage.setItem('sd_return_panel', document.getElementById('page-title')?.textContent || '');
+
+    showBanner('🔐 Redirecting to Microsoft sign-in for SharePoint access…', 'info');
+    setTimeout(() => { window.location.href = loginUrl; }, 1200);
+
+    // Return a promise that never resolves — the page will redirect
+    return new Promise(() => {});
+  }
+
+  // ── FLAG ENGINE ──────────────────────────────────────────────────────────
+  function buildFlags(queues, agents, unstaffed, reviews) {
+    const flags = [];
+    const qWaitSec   = getThreshold('queue-wait');
+    const abCount    = getThreshold('abandon-count');
+    const missWatch  = getThreshold('missed-watch');
+    const missCrit   = getThreshold('missed-critical');
+    const ahtMin     = getThreshold('aht');
+    const scoreFail  = getThreshold('score-fail');
+    const scoreWatch = getThreshold('score-watch');
+
+    // Queue-level flags
+    queues.forEach(q => {
+      if (q.avgWait / 1000 > qWaitSec) {
+        flags.push({ sev: 'Critical', sevClass: 'flag-red', type: 'Long Queue Wait',
+          detail: `Avg wait ${msToMmss(q.avgWait)} — threshold 0:${String(qWaitSec).padStart(2,'0')}`,
+          target: q.name, time: 'Today' });
+      }
+      if (q.abandonPct > getThreshold('abandon-pct') * 2) {
+        flags.push({ sev: 'Critical', sevClass: 'flag-red', type: 'Abandon Spike',
+          detail: `Abandon rate ${q.abandonPct.toFixed(1)}% — critical threshold`,
+          target: q.name, time: 'Today' });
+      } else if (q.abandonPct > getThreshold('abandon-pct')) {
+        flags.push({ sev: 'Watch', sevClass: 'flag-yellow', type: 'High Abandon %',
+          detail: `Abandon rate ${q.abandonPct.toFixed(1)}% — above ${getThreshold('abandon-pct')}% target`,
+          target: q.name, time: 'Today' });
+      }
+    });
+
+    // Agent-level flags
+    agents.forEach(a => {
+      if (a.notAnswered >= missCrit) {
+        flags.push({ sev: 'Critical', sevClass: 'flag-red', type: 'Missed Alerts',
+          detail: `${a.notAnswered} unanswered alerts — critical threshold (${missCrit})`,
+          target: a.name, time: 'Today' });
+      } else if (a.notAnswered >= missWatch) {
+        flags.push({ sev: 'Watch', sevClass: 'flag-yellow', type: 'Missed Alerts',
+          detail: `${a.notAnswered} unanswered alerts — watch threshold (${missWatch})`,
+          target: a.name, time: 'Today' });
+      }
+      if (a.avgHandle > ahtMin * 60 * 1000) {
+        flags.push({ sev: 'Watch', sevClass: 'flag-yellow', type: 'High AHT',
+          detail: `Avg handle time ${msToMmss(a.avgHandle)} — above ${ahtMin}:00 target`,
+          target: a.name, time: 'Today' });
+      }
+    });
+
+    // Unstaffed flags
+    unstaffed.forEach(u => {
+      flags.push({ sev: 'Watch', sevClass: 'flag-yellow', type: 'Unstaffed Queue',
+        detail: `Queue unstaffed for ${msToMmss(u.durMs)}`,
+        target: u.queue, time: u.start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+    });
+
+    // Review flags
+    reviews.forEach(r => {
+      if (r.isCritical) {
+        flags.push({ sev: 'Critical', sevClass: 'flag-red', type: 'Process Failure',
+          detail: `ATS review score ${r.score}/100 — process failure`,
+          target: r.agent, time: r.date });
+      } else if (r.score < scoreWatch) {
+        flags.push({ sev: 'Watch', sevClass: 'flag-yellow', type: 'At-Risk Score',
+          detail: `ATS review score ${r.score}/100 — below ${scoreWatch} threshold`,
+          target: r.agent, time: r.date });
+      }
+    });
+
+    return flags;
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
+
+  function renderQueueTable(queues) {
+    const tbody = document.querySelector('#panel-queues table tbody');
+    if (!tbody) return;
+    if (!queues.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;">No queue data returned.</td></tr>'; return; }
+    tbody.innerHTML = queues.map(q => {
+      const wColor = q.avgWait / 1000 > getThreshold('queue-wait') ? 'var(--red)' : 'var(--green)';
+      const aColor = q.abandonPct > getThreshold('abandon-pct') * 2 ? 'var(--red)' : q.abandonPct > getThreshold('abandon-pct') ? 'var(--yellow)' : 'var(--green)';
+      const ansColor = q.answerPct < 80 ? 'var(--red)' : q.answerPct < 90 ? 'var(--yellow)' : 'var(--green)';
+      return `<tr>
+        <td style="font-weight:600;">${q.name}</td>
+        <td class="mono">${q.offered}</td>
+        <td class="mono"><span style="color:${ansColor};">${q.answerPct.toFixed(1)}%</span></td>
+        <td class="mono"><span style="color:${aColor};">${q.abandonPct.toFixed(1)}%</span></td>
+        <td class="mono"><span style="color:${wColor};">${msToMmss(q.avgWait)}</span></td>
+        <td class="mono">${msToMmss(q.avgTalk)}</td>
+        <td class="mono">${msToMmss(q.asa)}</td>
+        <td><span class="flag ${q.statusClass}">${q.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderAgentTable(agents) {
+    const tbody = document.getElementById('agent-table-body');
+    if (!tbody) return;
+    if (!agents.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">No agent data returned.</td></tr>'; return; }
+
+    // Rebuild agent filter dropdown
+    const sel = document.getElementById('agent-filter');
+    if (sel) {
+      sel.innerHTML = '<option value="all">All Agents</option>' +
+        agents.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+    }
+
+    tbody.innerHTML = agents.map(a => {
+      const naColor = a.notAnswered >= getThreshold('missed-critical') ? 'var(--red)' : a.notAnswered >= getThreshold('missed-watch') ? 'var(--yellow)' : 'var(--green)';
+      return `<tr>
+        <td><div style="display:flex;align-items:center;gap:8px;">
+          <div class="agent-avatar" style="width:24px;height:24px;font-size:9px;">${a.initials}</div>
+          <span style="font-weight:600;">${a.name}</span>
+        </div></td>
+        <td class="mono">${a.alerts}</td>
+        <td class="mono"><span style="color:${naColor};">${a.notAnswered}</span></td>
+        <td class="mono">${msToMmss(a.avgHandle)}</td>
+        <td class="mono">${msToMmss(a.avgAlertTime)}</td>
+        <td class="mono">${msToHm(a.tOnQueue)}</td>
+        <td><span class="flag ${a.statusClass}">${a.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderUnstaffed(events) {
+    const panel = document.getElementById('panel-unstaffed');
+    if (!panel) return;
+
+    const countEl  = panel.querySelector('.stat-card.red .stat-value');
+    const longestEl = panel.querySelector('.stat-card.yellow .stat-value');
+    const totalEl  = panel.querySelector('.stat-card.blue .stat-value');
+
+    if (countEl)   countEl.textContent = events.length;
+    if (longestEl && events.length) longestEl.textContent = msToMmss(events[0].durMs);
+    if (totalEl)   totalEl.textContent = msToMmss(events.reduce((s, e) => s + e.durMs, 0));
+
+    const listEl = panel.querySelector('.table-wrap:last-of-type');
+    if (!listEl) return;
+
+    const maxDur = events.length ? events[0].durMs : 1;
+    const fmt = (d) => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    listEl.innerHTML = `<div class="panel-header"><span class="panel-title">Unstaffed Timeline</span></div>` +
+      (events.length === 0
+        ? '<div style="padding:20px;text-align:center;color:var(--text-muted);">No unstaffed events today.</div>'
+        : events.map(e => {
+            const widthPct = Math.max(4, Math.round((e.durMs / maxDur) * 92));
+            const color = e.durMs > 600000 ? 'var(--red)' : 'var(--yellow)';
+            return `<div class="unstaffed-item">
+              <span class="unstaffed-queue" style="color:${color};">${e.queue}</span>
+              <span class="unstaffed-time">${fmt(e.start)} – ${fmt(e.end)}</span>
+              <div class="duration-bar-wrap">
+                <div class="duration-bar" style="width:${widthPct}%;background:${color};"></div>
+                <span class="duration-label" style="color:${color};">${msToMmss(e.durMs)}</span>
+              </div>
+            </div>`;
+          }).join('')
+      );
+  }
+
+  function renderFlags(flags) {
+    // Update sidebar badge
+    const badge = document.querySelector('.nav-item .count-badge');
+    if (badge) badge.textContent = flags.filter(f => f.sev === 'Critical').length || '';
+
+    // Update flags panel summary cards
+    const crit   = flags.filter(f => f.sev === 'Critical').length;
+    const watch  = flags.filter(f => f.sev === 'Watch').length;
+    const flaggedAgents = [...new Set(flags.filter(f => ['Missed Alerts','High AHT','Process Failure','At-Risk Score'].includes(f.type)).map(f => f.target))];
+
+    const statCards = document.querySelectorAll('#panel-flags .stat-card');
+    if (statCards[0]) statCards[0].querySelector('.stat-value').textContent = crit;
+    if (statCards[1]) statCards[1].querySelector('.stat-value').textContent = watch;
+    if (statCards[2]) { statCards[2].querySelector('.stat-value').textContent = flaggedAgents.length; statCards[2].querySelector('.stat-meta').textContent = flaggedAgents.slice(0,3).join(' · ') || 'None'; }
+
+    const tbody = document.querySelector('#panel-flags table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = flags.length === 0
+      ? '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">No flags — all metrics within thresholds. 🎉</td></tr>'
+      : flags.map(f => `<tr>
+          <td><span class="flag ${f.sevClass}">${f.sev}</span></td>
+          <td>${f.type}</td>
+          <td>${f.detail}</td>
+          <td>${f.target}</td>
+          <td class="mono">${f.time}</td>
+          <td><button class="btn" style="font-size:11px;padding:4px 9px;">Review</button></td>
+        </tr>`).join('');
+
+    // Also update overview flags panel
+    const overviewAlerts = document.querySelector('#panel-overview .alerts-panel');
+    if (overviewAlerts) {
+      const topFlags = flags.slice(0, 4);
+      overviewAlerts.innerHTML = '<div class="panel-header"><span class="panel-title">Needs Attention</span></div>' +
+        (topFlags.length === 0
+          ? '<div class="alert-item"><div class="alert-body" style="color:var(--text-muted);">No active flags — all clear.</div></div>'
+          : topFlags.map(f => {
+              const dotClass = f.sevClass === 'flag-red' ? 'dot-red' : f.sevClass === 'flag-yellow' ? 'dot-yellow' : 'dot-blue';
+              return `<div class="alert-item">
+                <div class="alert-dot ${dotClass}"></div>
+                <div class="alert-body">
+                  <div class="alert-title">${f.type} — ${f.detail}</div>
+                  <div class="alert-detail">${f.target}</div>
+                  <div class="alert-time">${f.time}</div>
+                </div>
+              </div>`;
+            }).join('')
+        );
+    }
+  }
+
+  function renderReviews(reviews) {
+    const tbody = document.querySelector('#panel-reviews table tbody');
+    if (!tbody) return;
+    if (!reviews.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">No review data found in sheet "' + CONFIG.sharepoint.sheetName + '".</td></tr>'; return; }
+
+    tbody.innerHTML = reviews.map(r => {
+      const ratingStyle = r.ratingClass ? `class="flag ${r.ratingClass}"` : `style="background:var(--accent-soft);color:var(--accent);" class="flag"`;
+      const pStyle = r.priorityClass ? `class="flag ${r.priorityClass}"` : `class="flag" style="background:var(--surface2);color:var(--text-muted);"`;
+      const scoreColor = r.isCritical ? 'var(--red)' : r.score >= 80 ? 'var(--green)' : r.score >= getThreshold('score-watch') ? 'var(--accent)' : 'var(--yellow)';
+      return `<tr>
+        <td class="mono" style="color:var(--accent);">${r.esc}</td>
+        <td style="font-weight:600;">${r.agent}</td>
+        <td class="mono">${r.date}</td>
+        <td><span ${pStyle}>${r.priority || '—'}</span></td>
+        <td class="mono" style="color:${scoreColor};">${r.score}</td>
+        <td><span ${ratingStyle}>${r.rating}</span></td>
+        <td><span class="flag ${r.statusClass}">${r.status}</span></td>
+      </tr>`;
+    }).join('');
+
+    // Update summary stats
+    const total   = reviews.length;
+    const avg     = reviews.reduce((s, r) => s + r.score, 0) / total;
+    const fails   = reviews.filter(r => r.isCritical).length;
+    const atRisk  = [...new Set(reviews.filter(r => r.score < getThreshold('score-watch') && !r.isCritical).map(r => r.agent))].length;
+    const statCards = document.querySelectorAll('#panel-reviews .stat-card');
+    if (statCards[0]) statCards[0].querySelector('.stat-value').textContent = total;
+    if (statCards[1]) statCards[1].querySelector('.stat-value').textContent = avg.toFixed(1);
+    if (statCards[2]) statCards[2].querySelector('.stat-value').textContent = fails;
+    if (statCards[3]) statCards[3].querySelector('.stat-value').textContent = atRisk;
+
+    // Update overview score bars
+    const agentScores = {};
+    reviews.forEach(r => {
+      if (!agentScores[r.agent]) agentScores[r.agent] = [];
+      agentScores[r.agent].push(r.score);
+    });
+    const avgScores = Object.entries(agentScores)
+      .map(([name, scores]) => ({ name, avg: scores.reduce((s,v) => s+v,0)/scores.length }))
+      .sort((a,b) => b.avg - a.avg);
+
+    const scoreContainer = document.querySelector('#panel-overview .table-wrap:last-of-type > div:last-of-type');
+    if (scoreContainer) {
+      scoreContainer.innerHTML = avgScores.map(({ name, avg }) => {
+        const color = avg >= 90 ? 'var(--green)' : avg >= 80 ? 'var(--green)' : avg >= getThreshold('score-watch') ? 'var(--accent)' : 'var(--yellow)';
+        const label = avg >= 90 ? 'Excellent' : avg >= 80 ? 'Good' : avg >= getThreshold('score-watch') ? 'Average' : 'At Risk';
+        const flagClass = avg >= 80 ? 'flag-green' : avg >= getThreshold('score-watch') ? '' : 'flag-yellow';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--text-muted);">${name}</span>
+          <div class="score-bar-wrap" style="width:240px;">
+            <div class="score-bar-bg"><div class="score-bar-fill" style="width:${avg}%;background:${color};"></div></div>
+            <span class="score-val" style="color:${color};">${avg.toFixed(1)}</span>
+            <span class="flag ${flagClass}" style="${!flagClass ? 'background:var(--accent-soft);color:var(--accent);' : ''}">${label}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  function renderOverviewKPIs(queues, agents) {
+    const cards = document.querySelectorAll('#panel-overview .stat-grid .stat-card');
+    if (!cards.length || !queues.length) return;
+
+    const totalOffered  = queues.reduce((s, q) => s + q.offered, 0);
+    const totalAnswered = queues.reduce((s, q) => s + q.answered, 0);
+    const totalAbandoned = queues.reduce((s, q) => s + q.abandoned, 0);
+    const avgWait  = queues.reduce((s, q) => s + q.avgWait, 0) / queues.length;
+    const avgAsa   = queues.reduce((s, q) => s + q.asa, 0) / queues.length;
+    const ansPct   = totalOffered > 0 ? (totalAnswered / totalOffered * 100) : 0;
+    const abPct    = totalOffered > 0 ? (totalAbandoned / totalOffered * 100) : 0;
+
+    if (cards[0]) { cards[0].querySelector('.stat-value').textContent = totalOffered; }
+    if (cards[1]) {
+      const el = cards[1].querySelector('.stat-value');
+      el.textContent = ansPct.toFixed(1) + '%';
+      const badge = cards[1].querySelector('.stat-badge');
+      if (badge) { badge.className = 'stat-badge ' + (ansPct >= 90 ? 'badge-green' : 'badge-red'); badge.textContent = ansPct >= 90 ? '✓ On Target' : '↓ Below Target'; }
+    }
+    if (cards[2]) {
+      const el = cards[2].querySelector('.stat-value');
+      el.textContent = abPct.toFixed(1) + '%';
+      const badge = cards[2].querySelector('.stat-badge');
+      if (badge) { badge.className = 'stat-badge ' + (abPct > getThreshold('abandon-pct') ? 'badge-red' : 'badge-green'); badge.textContent = abPct > getThreshold('abandon-pct') ? '⚠ Above Target' : '✓ On Target'; }
+    }
+    if (cards[3]) { cards[3].querySelector('.stat-value').textContent = msToMmss(avgWait); }
+    if (cards[4]) { cards[4].querySelector('.stat-value').textContent = msToMmss(avgAsa); }
+  }
+
+  function updateLastRefreshed() {
+    const el = document.getElementById('page-breadcrumb');
+    if (el && document.getElementById('panel-overview').classList.contains('active')) {
+      el.textContent = 'Last refreshed: ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    }
+  }
+
+  // ── MAIN REFRESH ─────────────────────────────────────────────────────────
+  async function refreshAllData() {
+    if (!checkConfig()) return;
+
+    showLoadingOverlay('Connecting to Genesys…');
+
+    try {
+      showLoadingOverlay('Fetching queue metrics…');
+      const queues = await fetchQueueStats();
+      liveData.queues = queues;
+      renderQueueTable(queues);
+      renderOverviewKPIs(queues, []);
+
+      showLoadingOverlay('Fetching agent metrics…');
+      const agents = await fetchAgentStats();
+      liveData.agents = agents;
+      renderAgentTable(agents);
+      renderOverviewKPIs(queues, agents);
+
+      showLoadingOverlay('Checking for unstaffed events…');
+      const unstaffed = await fetchUnstaffedEvents();
+      liveData.unstaffed = unstaffed;
+      renderUnstaffed(unstaffed);
+
+      showLoadingOverlay('Loading SharePoint reviews…');
+      try {
+        const reviews = await fetchReviews();
+        liveData.reviews = reviews;
+        renderReviews(reviews);
+      } catch(spErr) {
+        console.warn('SharePoint load failed:', spErr);
+        showBanner('SharePoint: ' + spErr.message, 'error');
+      }
+
+      const flags = buildFlags(queues, agents, unstaffed, liveData.reviews);
+      liveData.flags = flags;
+      renderFlags(flags);
+
+      updateLastRefreshed();
+      hideLoadingOverlay();
+      showBanner('✓ Data refreshed successfully', 'success');
+
+      // Schedule next auto-refresh
+      clearTimeout(autoRefreshTimer);
+      autoRefreshTimer = setTimeout(refreshAllData, AUTO_REFRESH_MS);
+
+    } catch(err) {
+      hideLoadingOverlay();
+      console.error('Refresh error:', err);
+      showBanner('Error: ' + err.message, 'error');
+    }
+  }
+
+  // Wire Refresh button
+  document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.querySelector('.btn-primary');
+    if (refreshBtn) refreshBtn.addEventListener('click', refreshAllData);
+
+    // Auto-load on open if config is present
+    if (typeof CONFIG !== 'undefined' && CONFIG.genesys?.workerUrl && !CONFIG.genesys.workerUrl.includes('PASTE')) {
+      refreshAllData();
+    } else {
+      showBanner('⚠ Worker URL not set — paste your Cloudflare Worker URL into the workerUrl field at the top of this file.', 'error');
+    }
+  });
+</script>
+
+</body>
+</html>
